@@ -1,0 +1,66 @@
+.day-box {
+    border: 1px solid #757171;
+    min-height: 100px;
+    padding: 10px;
+}
+
+.day-box .date {
+    font-weight: bold;
+}
+
+.booking-info {
+    margin-top: 10px;
+}
+
+/* Calendar Custom Styles */
+.table.calendar {
+    width: 100%; /* Further reduce calendar size */
+    margin: auto;
+    table-layout: fixed; /* Ensures uniform column width */
+}
+
+.table.calendar th, .table.calendar td {
+    text-align: center;
+    padding: 5px; /* Reduced padding */
+    font-size: 0.55em; /* Smaller text */
+    border: 1px solid #333333; /* Very dark border, not black */
+}
+
+/* Smaller headers */
+.table.calendar th {
+    font-size: 0.8em;
+}
+
+
+
+/* Easily changeable color for weekends */
+.table.calendar.weekend-shaded th:nth-child(6), 
+.table.calendar.weekend-shaded th:nth-child(7),
+.table.calendar.weekend-shaded td:nth-child(6), 
+.table.calendar.weekend-shaded td:nth-child(7) {
+    background-color: var(--weekend-bg-color, #f0f0f0);
+}
+
+/* Root variable adjustments */
+:root {
+    --available-day-bg-color: #e3f2e3; /* Light green color */
+    --weekend-bg-color: #ececec; /* Your preferred color for weekends */
+}
+
+.available-day {
+    background-color: var(--available-day-bg-color);
+}
+
+/* Media queries for responsiveness */
+@media (max-width: 768px) {
+    .table.calendar {
+        width: 100%;
+    }
+
+    .table.calendar th, .table.calendar td {
+        padding: 2px;
+        font-size: 0.7em;
+    }
+}
+
+
