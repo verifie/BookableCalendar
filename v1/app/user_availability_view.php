@@ -49,6 +49,25 @@ $message = '';
 // 7. Fetches
 // ----------
 
+// Fetch closed days
+$closedDaysSql = "SELECT WorkingClosedDaysName, WorkingClosedDays FROM WorkingDaysClosed";
+$closedDaysResult = $conn->query($closedDaysSql);
+$closedDays = [];
+while ($row = $closedDaysResult->fetch_assoc()) {
+    $closedDayFormattedDate = date('Y-m-d', strtotime($row['WorkingClosedDays']));
+    $closedDays[$closedDayFormattedDate] = $row['WorkingClosedDaysName'];
+}
+
+// Fetch holidays
+$holidaysSql = "SELECT WorkingHolidaysName, WorkingHolidays FROM WorkingDaysHoliday";
+$holidaysResult = $conn->query($holidaysSql);
+$holidays = [];
+while ($row = $holidaysResult->fetch_assoc()) {
+    $holidayFormattedDate = date('Y-m-d', strtotime($row['WorkingHolidays']));
+    $holidays[$holidayFormattedDate] = $row['WorkingHolidaysName'];
+}
+
+
 // Fetch assets from the database
 $assetQuery = "SELECT AssetID, AssetName FROM Assets";
 $assetResult = $conn->query($assetQuery);
@@ -76,8 +95,8 @@ if (isset($_GET['month']) && isset($_GET['year'])) {
 
 
 // Function to build the calendar
-function build_calendar($month, $year, $conn, $selectedAsset = '', $showDetails = false) {
-
+function build_calendar($month, $year, $conn, $selectedAsset = '', $showDetails = false, $closedDays, $holidays) {
+    
     // Create an array containing abbreviations of days of week
     $daysOfWeek = array('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday');
 
@@ -95,6 +114,14 @@ function build_calendar($month, $year, $conn, $selectedAsset = '', $showDetails 
 
     // What is the index value (0-6) of the first day of the month?
     $dayOfWeek = $dateComponents['wday'];
+
+    // What is the index value (0-6) of the first day of the month?
+    // Adjusting for Monday as the first day of the week
+    $dayOfWeek = $dateComponents['wday'] - 1;
+    if ($dayOfWeek < 0) {
+        $dayOfWeek = 6; // If the first day of the month is a Sunday, set $dayOfWeek to 6 (Sunday)
+    }
+
 
     // Create the table tag opener and day headers
     $calendar = "<table class='table table-bordered calendar weekend-shaded'>";
@@ -144,29 +171,37 @@ function build_calendar($month, $year, $conn, $selectedAsset = '', $showDetails 
             $calendar .= "<td></td>"; 
         }
     }
-    
+
     while ($currentDay <= $numberDays) {
-
-        // Seventh column (Sunday) reached. Start a new row.
-        if ($dayOfWeek == 7) {
-            $dayOfWeek = 0;
-            $calendar .= "</tr><tr>";
-        }
-
-        $currentDayRel = str_pad($currentDay, 2, "0", STR_PAD_LEFT);
-        $date = "$year-$month-$currentDayRel";
-        $dayLink = "<a href='user_availability_view_day.php?y=$year&m=$month&d=$currentDayRel'>$currentDay</a>";
-
-        
-        // Determine if the day is available or booked
-        if (isset($bookings[$currentDay])) {
-            $bookingInfo = implode(', ', $bookings[$currentDay]);
-            $availableClass = "booked-day"; // Class for booked days
+        // Format the current day in Y-m-d format for comparison
+        $formattedDate = sprintf("%04d-%02d-%02d", $year, $month, $currentDay);
+    
+        // Initialize booking info and class for the day
+        $bookingInfo = '';
+        $availableClass = '';
+    
+        // Link to the detailed day view
+        $dayLink = "<a href='user_availability_view_day.php?y=$year&m=$month&d=$currentDay'>$currentDay</a>";
+    
+        // Check for closed days and holidays
+        $isClosedDay = isset($closedDays[$formattedDate]);
+        $isHoliday = isset($holidays[$formattedDate]);
+    
+        if ($isClosedDay || $isHoliday) {
+            $closedOrHolidayName = $isClosedDay ? "Closed - " . $closedDays[$formattedDate] : "National Holiday - " . $holidays[$formattedDate];
+            $bookingInfo = $showDetails ? $closedOrHolidayName : ($isClosedDay ? "Closed" : "National Holiday");
+            $availableClass = "closed-day"; // Class for closed days or holidays
         } else {
-            $bookingInfo = "Available";
-            $availableClass = "available-day"; // Class for available days
-
-            // Check if the calendar day is a weekend, and shade it if so.
+            // Check if the day is booked
+            if (isset($bookings[$currentDay])) {
+                $bookingInfo = implode(', ', $bookings[$currentDay]);
+                $availableClass = "booked-day"; // Class for booked days
+            } else {
+                $bookingInfo = "Available";
+                $availableClass = "available-day"; // Class for available days
+            }
+    
+            // Shade weekends
             if ($dayOfWeek == 5 || $dayOfWeek == 6) { // 5 = Saturday, 6 = Sunday
                 $availableClass .= " weekend-shaded";
             }
@@ -174,28 +209,33 @@ function build_calendar($month, $year, $conn, $selectedAsset = '', $showDetails 
     
         // Add hover effect class
         $hoverClass = "day-hover";
-
-
+    
         // Add the table cell to the calendar
         $calendar .= "<td class='$availableClass $hoverClass'><h4>$dayLink</h4> <p>$bookingInfo</p></td>";
-
-
+    
         // Increment counters
         $currentDay++;
         $dayOfWeek++;
+    
+        // Seventh column (Sunday) reached. Start a new row.
+        if ($dayOfWeek == 7) {
+            $dayOfWeek = 0;
+            $calendar .= "</tr><tr>";
+        }
     }
-
+    
+    
     // Complete the row of the last week in month, if necessary
-    if ($dayOfWeek != 7) {
+    if ($dayOfWeek != 0) {
         $remainingDays = 7 - $dayOfWeek;
         for($l = 0; $l < $remainingDays; $l++){ 
             $calendar .= "<td></td>"; 
         }
     }
-
+    
     $calendar .= "</tr>";
     $calendar .= "</table>";
-
+    
     return $calendar;
 }
 
@@ -216,7 +256,7 @@ function nav_url($month, $year, $direction) {
             $year++;
         }
     }
-    return "user-availability-view.php?month=" . $month . "&year=" . $year;
+    return "user_availability_view.php?month=" . $month . "&year=" . $year;
 }
 
 
@@ -319,8 +359,7 @@ require 'x-header.php';
 
                         <?php
                             $selectedAsset = isset($_GET['asset']) ? $_GET['asset'] : '';
-                            echo build_calendar($month, $year, $conn, $selectedAsset, $showDetails);
-                            $conn->close();
+                            echo build_calendar($month, $year, $conn, $selectedAsset, $showDetails, $closedDays, $holidays);
                         ?>
                         
 
@@ -330,7 +369,7 @@ require 'x-header.php';
                             <div class="row mb-4">
                                 <!-- Asset Selection Form -->
                                 <div class="col-md-4">
-                                    <form action="user-availability-view.php" method="get" class="form-inline">
+                                    <form action="user_availability_view.php" method="get" class="form-inline">
                                         <div class="form-group mb-2">
                                             <label for="assetSelect" class="sr-only">Choose what you wish to book:</label>
                                             <select name="asset" id="assetSelect" class="form-control mr-2">
@@ -349,7 +388,7 @@ require 'x-header.php';
 
                                 <!-- Detailed View Selection Form -->
                                 <div class="col-md-4 ml-md-3">
-                                    <form action="user-availability-view.php" method="get" class="form-inline">
+                                    <form action="user_availability_view.php" method="get" class="form-inline">
                                         <div class="form-group mb-2">
                                             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                                             <select name="show_details" id="showDetailsSelect" class="form-control mr-2">
@@ -399,3 +438,4 @@ require 'x-header.php';
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
 </body>
 </html>
+<?php $conn->close(); ?>

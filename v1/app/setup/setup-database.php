@@ -92,11 +92,6 @@ $sql = "
         FOREIGN KEY (BlockID) REFERENCES Assets(AssetID)
     );
 
-    CREATE TABLE BookingLengths (
-        LengthID INT AUTO_INCREMENT PRIMARY KEY,
-        LengthInMinutes INT NOT NULL
-    );
-
     CREATE TABLE Bookings (
         BookingID INT AUTO_INCREMENT PRIMARY KEY,
         UserID INT,
@@ -112,26 +107,26 @@ $sql = "
         Status VARCHAR(50),
         FOREIGN KEY (UserID) REFERENCES Users(UserID),
         FOREIGN KEY (AssetID) REFERENCES Assets(AssetID),
-        FOREIGN KEY (LengthID) REFERENCES BookingLengths(LengthID)
     );
 
     CREATE TABLE AdminSettings (
         SettingID INT AUTO_INCREMENT PRIMARY KEY,
-        MaxBookingLength INT,
-        AllowPauseUnpauseAssets BOOLEAN,
-        DefaultBookingLength INT,
-        MinimumBookingNotice INT
+        SettingName VARCHAR(255),
+        Setting VARCHAR(255)
     );
 
-    CREATE TABLE BookingHistory (
-        HistoryID INT AUTO_INCREMENT PRIMARY KEY,
-        BookingID INT,
-        Action VARCHAR(50),
-        Timestamp DATETIME,
-        User INT,
-        FOREIGN KEY (BookingID) REFERENCES Bookings(BookingID),
-        FOREIGN KEY (User) REFERENCES Users(UserID)
+    CREATE TABLE WorkingDaysClosed (
+        ClosedDayID INT AUTO_INCREMENT PRIMARY KEY,
+        WorkingClosedDaysName VARCHAR(255),
+        WorkingClosedDays DATE
     );
+
+    CREATE TABLE WorkingDaysHoliday (
+        HolidayDayID INT AUTO_INCREMENT PRIMARY KEY,
+        WorkingHolidaysName VARCHAR(255)
+        WorkingHolidays DATE,
+    );
+
 
     CREATE TABLE Payments (
         PaymentID INT AUTO_INCREMENT PRIMARY KEY,

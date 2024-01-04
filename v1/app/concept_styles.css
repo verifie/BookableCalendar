@@ -75,3 +75,7 @@
 .booked-day {
     background-color: var(--available-day-bg-color, #ffffff); /* White color */
 }
+
+.closed-day {
+    background-color: #ffcccc; /* Light red background for closed days */
+}

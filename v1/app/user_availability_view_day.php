@@ -40,6 +40,29 @@ while ($row = $result->fetch_assoc()) {
     ];
 }
 
+
+// 6. Fetch closed days and holidays
+$closedDaysSql = "SELECT WorkingClosedDaysName FROM WorkingDaysClosed WHERE WorkingClosedDays = ?";
+$holidaysSql = "SELECT WorkingHolidaysName FROM WorkingDaysHoliday WHERE WorkingHolidays = ?";
+$specialDayInfo = '';
+
+$stmtClosed = $conn->prepare($closedDaysSql);
+$stmtClosed->bind_param("s", $date);
+$stmtClosed->execute();
+$resultClosed = $stmtClosed->get_result();
+if ($rowClosed = $resultClosed->fetch_assoc()) {
+    $specialDayInfo = "Closed" ;// Hiding closure reason for now.
+    //. $rowClosed['WorkingClosedDaysName'];
+}
+
+$stmtHoliday = $conn->prepare($holidaysSql);
+$stmtHoliday->bind_param("s", $date);
+$stmtHoliday->execute();
+$resultHoliday = $stmtHoliday->get_result();
+if ($rowHoliday = $resultHoliday->fetch_assoc()) {
+    $specialDayInfo = "National Holiday - " . $rowHoliday['WorkingHolidaysName'];
+}
+
 // 6. Close database connection
 $conn->close();
 ?>
@@ -90,23 +113,27 @@ require 'x-header.php';
     ?>
 
         <!-- =========================================== USER CONTENT AND FUNCTIONS =================================== -->
-
         <div class="row">
-
             <div class="col-8">
                 <!-- User Welcome heading -->
                 <h1 class="mt-4">
                     Availability
                 </h1>
-                <br/> 
+                <br/>
 
                 <div class="container">
                     <h1>Bookings for <?= htmlspecialchars("$year-$month-$day") ?></h1>
 
+                    <?php if ($specialDayInfo): ?>
+                        <div class="alert alert-danger">
+                            <?= htmlspecialchars($specialDayInfo) ?>
+                        </div>
+                    <?php endif; ?>
+
                     <table class="table">
                         <thead>
                             <tr>
-                                <th>Asset</th>
+                                <th> </th>
                                 <th>Start Time</th>
                                 <th>End Time</th>
                             </tr>

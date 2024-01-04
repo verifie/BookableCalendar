@@ -10,7 +10,7 @@
 
 
             <!-- Asset Management ##################################################################################### -->
-            <br/>
+            <br/><br/>
             <h4><small>Asset Management</small></h4>
 
             <a href="admin_asset_view.php" class="list-group-item list-group-item-action">
@@ -23,7 +23,7 @@
 
 
             <!-- Booking Management ################################################################################## -->
-            <br/>
+            <br/><br/>
             <h4><small>Booking Management</small></h4>
 
             <a href="admin_booking_view.php" class="list-group-item list-group-item-action">
@@ -36,7 +36,7 @@
 
 
             <!-- User Management ##################################################################################### -->
-            <br/>
+            <br/><br/>
             <h4><small>User Management</small></h4>
 
             <a href="admin_users_view.php" class="list-group-item list-group-item-action">
@@ -47,6 +47,14 @@
                 Approve New Users
             </a>
 
+
+            <!-- Settings Management ################################################################################# -->
+
+            <br/><br/>
+            <h4><small>App Settings Management</small></h4>
+            <a href="admin_configure.php" class="list-group-item list-group-item-action">
+                App Configuration
+            </a>
 
             <!-- End of management Panel ############################################################################ -->
         </div>
