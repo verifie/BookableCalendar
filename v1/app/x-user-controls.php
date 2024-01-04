@@ -13,7 +13,7 @@
             <br/>
             <h4><small>Bookings</small></h4>
 
-            <a href="user-availability-view.php" class="list-group-item list-group-item-action">
+            <a href="user_availability_view.php" class="list-group-item list-group-item-action">
                 View our current availability
             </a>
 

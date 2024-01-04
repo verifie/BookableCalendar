@@ -32,25 +32,6 @@
 }
 
 
-
-/* Easily changeable color for weekends */
-.table.calendar.weekend-shaded th:nth-child(6), 
-.table.calendar.weekend-shaded th:nth-child(7),
-.table.calendar.weekend-shaded td:nth-child(6), 
-.table.calendar.weekend-shaded td:nth-child(7) {
-    background-color: var(--weekend-bg-color, #f0f0f0);
-}
-
-/* Root variable adjustments */
-:root {
-    --available-day-bg-color: #e3f2e3; /* Light green color */
-    --weekend-bg-color: #ececec; /* Your preferred color for weekends */
-}
-
-.available-day {
-    background-color: var(--available-day-bg-color);
-}
-
 /* Media queries for responsiveness */
 @media (max-width: 768px) {
     .table.calendar {
@@ -64,3 +45,33 @@
 }
 
 
+/* Ensuring that available days maintain their color */
+.available-day {
+    background-color: var(--available-day-bg-color, #acf1d7); /* Light green color */
+}
+
+/* Booked day hover effect */
+.day-hover:hover {
+    background-color: rgba(0, 0, 0, 0.25); /* 25% darker tint on hover */
+}
+
+
+/* Specific styles for hover effect on available days */
+.available-day.day-hover:hover {
+    background-color: #86b8a5; /* 25% darker tint on light green */
+}
+
+/* Weekend shade */
+.weekend-shaded {
+    background-color: var(--weekend-bg-color, #f0f0f0);
+}
+
+/* Specific styles for hover effect on weekend days */
+.weekend-shaded.day-hover:hover {
+    background-color: rgba(68, 57, 57, 0.664); /* 25% darker tint on weekend color */
+}
+
+/* Ensuring that available days maintain their color */
+.booked-day {
+    background-color: var(--available-day-bg-color, #ffffff); /* White color */
+}

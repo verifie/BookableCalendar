@@ -150,7 +150,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $stmt->close();
 
         // Redirect to the booking received page
-        header("Location: user-booking-request-received.php");
+        header("Location: user_booking_request_received.php");
         exit();
     } else {
         // Handle errors

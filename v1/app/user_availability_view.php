@@ -59,12 +59,15 @@ while($assetRow = $assetResult->fetch_assoc()) {
 
 
 // 7. Calendar View
+
 // Check if month and year are set in the URL
 if (isset($_GET['month']) && isset($_GET['year'])) {
     $month = $_GET['month'];
     $year = $_GET['year'];
 } else {
-    // Get current month and year
+    // If the month and year aren't in the URL, Get current month and year and present that.
+    // This is the default view.
+    // We can improve this by checking if the current month is fully booked and then present the next month with availability.
     $dateComponents = getdate();
     $month = $dateComponents['mon'];
     $year = $dateComponents['year'];
@@ -143,9 +146,6 @@ function build_calendar($month, $year, $conn, $selectedAsset = '', $showDetails 
     }
     
     while ($currentDay <= $numberDays) {
-        // Check if the current day is a weekend
-        $isWeekend = $dayOfWeek == 6 || $dayOfWeek == 0; // 6 = Saturday, 0 = Sunday
-        $availableClass = "";
 
         // Seventh column (Sunday) reached. Start a new row.
         if ($dayOfWeek == 7) {
@@ -155,17 +155,29 @@ function build_calendar($month, $year, $conn, $selectedAsset = '', $showDetails 
 
         $currentDayRel = str_pad($currentDay, 2, "0", STR_PAD_LEFT);
         $date = "$year-$month-$currentDayRel";
+        $dayLink = "<a href='user_availability_view_day.php?y=$year&m=$month&d=$currentDayRel'>$currentDay</a>";
 
+        
+        // Determine if the day is available or booked
         if (isset($bookings[$currentDay])) {
             $bookingInfo = implode(', ', $bookings[$currentDay]);
+            $availableClass = "booked-day"; // Class for booked days
         } else {
             $bookingInfo = "Available";
-            if (!$isWeekend) {
-                $availableClass = "available-day";
+            $availableClass = "available-day"; // Class for available days
+
+            // Check if the calendar day is a weekend, and shade it if so.
+            if ($dayOfWeek == 5 || $dayOfWeek == 6) { // 5 = Saturday, 6 = Sunday
+                $availableClass .= " weekend-shaded";
             }
         }
+    
+        // Add hover effect class
+        $hoverClass = "day-hover";
 
-        $calendar .= "<td class='$availableClass'><h4>$currentDay</h4> <p>$bookingInfo</p></td>";
+
+        // Add the table cell to the calendar
+        $calendar .= "<td class='$availableClass $hoverClass'><h4>$dayLink</h4> <p>$bookingInfo</p></td>";
 
 
         // Increment counters
