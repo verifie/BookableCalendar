@@ -44,10 +44,16 @@
     }
 }
 
-
 /* Ensuring that available days maintain their color */
 .available-day {
     background-color: var(--available-day-bg-color, #acf1d7); /* Light green color */
+    z-index: -1;
+}
+
+/* Weekend shading */
+.weekend-shadeds {
+    background-color: var(--available-day-bg-color, #dad7d7); 
+    z-index: -1;
 }
 
 /* Booked day hover effect */
@@ -59,11 +65,7 @@
 /* Specific styles for hover effect on available days */
 .available-day.day-hover:hover {
     background-color: #86b8a5; /* 25% darker tint on light green */
-}
-
-/* Weekend shade */
-.weekend-shaded {
-    background-color: var(--weekend-bg-color, #f0f0f0);
+    z-index: -1;
 }
 
 /* Specific styles for hover effect on weekend days */
@@ -74,8 +76,85 @@
 /* Ensuring that available days maintain their color */
 .booked-day {
     background-color: var(--available-day-bg-color, #ffffff); /* White color */
+    z-index: -1;
 }
 
 .closed-day {
-    background-color: #ffcccc; /* Light red background for closed days */
+    background-color: rgba(247, 183, 153, 0.767);
+    z-index: -1;
 }
+
+
+.past-day::after {
+    content: '×';
+    color: rgba(27, 6, 75, 0.25);
+    font-size: 14em;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);  
+    z-index: 2;
+}
+
+.past-day {
+    position: relative;
+    overflow: hidden;
+    filter: blur(0.5px);
+    background-color:rgba(195, 178, 235, 0.281); /* Light red background for closed days */
+    border: 1px solid #0a0909; /* Ensure border visibility */
+}
+
+.today-day::after {
+    content: ' ';
+    color: rgba(253, 80, 0, 0.616);
+    font-size: 12em;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+}
+
+.today-day {
+    position: relative;
+    overflow: hidden;
+    background-color: rgba(106, 188, 255, 0.788); /* Adjust the background color as needed */
+    border: 1px solid #0a0909;
+}
+
+
+/* Day view Matrix schedule */
+.schedule-matrix table {
+    width: 100%; /* Adjust as needed */
+    table-layout: fixed; /* Ensures uniform column width */
+    border: 1px solid #0a0909; /* Ensure border visibility */
+}
+
+.schedule-matrix th {
+    min-width: 15px; /* Adjust minimum width as needed */
+    text-align: center;
+    writing-mode: vertical-lr;
+    transform: rotate(180deg);
+    white-space: nowrap; /* Keeps the text in one line */
+    border: 1px solid #0a0909; /* Ensure border visibility */
+}
+
+.schedule-matrix td {
+    background-color: deeporange;
+    font-size: 0.6em; /* Reduced font size */
+    height: 8px; /* Reduced height */
+    border: 1px solid #0a0909; /* Ensure border visibility */
+}
+
+.schedule-matrix td.booked {
+    background-color: deeporange;
+    font-size: 0.6em; /* Reduced font size */
+    height: 8px; /* Reduced height */
+    border: 1px solid #0a0909; /* Ensure border visibility */
+}
+
+.schedule-matrix .booked-slot {
+    background-color: #FF5733; /* Change this color to your preferred booked time color */
+}
+
+/* END Day view Matrix schedule */

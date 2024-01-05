@@ -49,6 +49,16 @@ $message = '';
 // 7. Fetches
 // ----------
 
+// Helper to get todays date in the right format. Used to show past, present and future days in the calendar.
+function classifyDay($year, $month, $day) {
+    $today = date('Y-m-d');
+    $currentDate = date('Y-m-d', mktime(0, 0, 0, $month, $day, $year));
+
+    if ($currentDate < $today) return 'past';
+    if ($currentDate == $today) return 'today';
+    return 'future';
+}
+
 // Fetch closed days
 $closedDaysSql = "SELECT WorkingClosedDaysName, WorkingClosedDays FROM WorkingDaysClosed";
 $closedDaysResult = $conn->query($closedDaysSql);
@@ -176,6 +186,20 @@ function build_calendar($month, $year, $conn, $selectedAsset = '', $showDetails 
         // Format the current day in Y-m-d format for comparison
         $formattedDate = sprintf("%04d-%02d-%02d", $year, $month, $currentDay);
     
+        // Add a cross or circle if the day is in the past or today.
+        $dayClassification = classifyDay($year, $month, $currentDay);
+        $additionalClass = '';
+        $additionalStyle = '';
+    
+        if ($dayClassification == 'past') {
+            $additionalClass = 'past-day';
+            $additionalStyle = 'border: 1px solid black;';
+            // Removed line-through style, as it's not needed with the X overlay
+        } elseif ($dayClassification == 'today') {
+            $additionalClass = 'today-day';
+            $additionalStyle = 'border: 2px (253, 80, 0, 0.616); background-color: rgb(76, 191, 206);';
+        }
+
         // Initialize booking info and class for the day
         $bookingInfo = '';
         $availableClass = '';
@@ -203,7 +227,7 @@ function build_calendar($month, $year, $conn, $selectedAsset = '', $showDetails 
     
             // Shade weekends
             if ($dayOfWeek == 5 || $dayOfWeek == 6) { // 5 = Saturday, 6 = Sunday
-                $availableClass .= " weekend-shaded";
+                $availableClass .= " weekend-shadeds";
             }
         }
     
@@ -211,8 +235,8 @@ function build_calendar($month, $year, $conn, $selectedAsset = '', $showDetails 
         $hoverClass = "day-hover";
     
         // Add the table cell to the calendar
-        $calendar .= "<td class='$availableClass $hoverClass'><h4>$dayLink</h4> <p>$bookingInfo</p></td>";
-    
+        $calendar .= "<td class='$availableClass $hoverClass $additionalClass' style='$additionalStyle'><h4>$dayLink</h4> <p>$bookingInfo</p></td>";
+        
         // Increment counters
         $currentDay++;
         $dayOfWeek++;

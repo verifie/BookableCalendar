@@ -63,6 +63,49 @@ if ($rowHoliday = $resultHoliday->fetch_assoc()) {
     $specialDayInfo = "National Holiday - " . $rowHoliday['WorkingHolidaysName'];
 }
 
+// Add code for a day schedule.
+
+// Fetch assets for columns
+$assetSql = "SELECT AssetID, AssetName FROM Assets";
+$assetResult = $conn->query($assetSql);
+$assets = [];
+while ($row = $assetResult->fetch_assoc()) {
+    $assets[$row['AssetID']] = $row['AssetName'];
+}
+
+// Initialize schedule array
+$schedule = [];
+for ($hour = 0; $hour < 24; $hour++) {
+    for ($minute = 0; $minute < 60; $minute += 15) { // 15-minute increments
+        $time = str_pad($hour, 2, '0', STR_PAD_LEFT) . ":" . str_pad($minute, 2, '0', STR_PAD_LEFT);
+        foreach ($assets as $assetId => $assetName) {
+            $schedule[$time][$assetId] = ''; // Initialize with empty string
+        }
+    }
+}
+
+// Populate the schedule with booking information
+foreach ($bookings as $booking) {
+    $startTime = DateTime::createFromFormat('H:i', $booking['start']);
+    $endTime = DateTime::createFromFormat('H:i', $booking['end']);
+    $assetId = array_search($booking['asset'], $assets);
+
+    // Loop through each 15-minute interval and mark as booked
+    $current = clone $startTime;
+    while ($current < $endTime) {
+        $timeSlot = $current->format('H:i');
+        $schedule[$timeSlot][$assetId] = 'booked';
+        $current->modify('+15 minutes'); // Increment by 15 minutes
+    }
+}
+
+
+// Make the date pretty
+// Assuming $year, $month, and $day are already set to the respective values
+$timestamp = mktime(0, 0, 0, $month, $day, $year);
+$formattedDate = date("l jS F Y", $timestamp); // Formats date as 'Thursday 4th January 2024'
+
+
 // 6. Close database connection
 $conn->close();
 ?>
@@ -122,7 +165,7 @@ require 'x-header.php';
                 <br/>
 
                 <div class="container">
-                    <h1>Bookings for <?= htmlspecialchars("$year-$month-$day") ?></h1>
+                    <h2>Bookings for <?= htmlspecialchars($formattedDate) ?></h2>
 
                     <?php if ($specialDayInfo): ?>
                         <div class="alert alert-danger">
@@ -133,7 +176,7 @@ require 'x-header.php';
                     <table class="table">
                         <thead>
                             <tr>
-                                <th> </th>
+                                <th>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>
                                 <th>Start Time</th>
                                 <th>End Time</th>
                             </tr>
@@ -155,6 +198,36 @@ require 'x-header.php';
                     </table>
                     <a href="user_availability_view.php?month=<?= $month ?>&year=<?= $year ?>" class="btn btn-primary">Back to Calendar</a>
                 </div>
+
+
+
+                <!-- Day schedule here -->
+                <br/><hr><br/>
+
+                <div class="schedule-matrix">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <?php foreach ($assets as $assetName): ?>
+                                    <th><?= htmlspecialchars($assetName) ?></th>
+                                <?php endforeach; ?>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($schedule as $time => $row): ?>
+                                <tr>
+                                    <td><?= $time ?></td>
+                                    <?php foreach ($assets as $assetId => $assetName): ?>
+                                        <td class="<?= $row[$assetId] === 'booked' ? 'booked-slot' : '' ?>"></td>
+                                    <?php endforeach; ?>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+
             </div>
 
 

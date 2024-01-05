@@ -75,18 +75,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <br/>
 
                 <!-- Form to show and change working hours -->
-                <form method="post">
-                    <div class="form-group">
-                        <label for="workingHoursStart">Start Time:</label>
-                        <input type="time" class="form-control" id="workingHoursStart" name="workingHoursStart" value="<?php echo $settings['WorkingHoursStart']; ?>">
-                    </div>
-                    <div class="form-group">
-                        <label for="workingHoursEnd">End Time:</label>
-                        <input type="time" class="form-control" id="workingHoursEnd" name="workingHoursEnd" value="<?php echo $settings['WorkingHoursEnd']; ?>">
-                    </div>
-                    <button type="submit" class="btn btn-primary">Update Working Hours</button>
-                </form>
-            </div>
+                <div class="schedule-matrix">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <?php foreach ($assets as $assetName): ?>
+                                    <th><?= htmlspecialchars($assetName) ?></th>
+                                <?php endforeach; ?>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($schedule as $time => $row): ?>
+                                <?php
+                                // Check if the time is within working hours
+                                $isWorkingTime = (strtotime($time) >= strtotime($settings['WorkingHoursStart']) && strtotime($time) < strtotime($settings['WorkingHoursEnd']));
+                                $rowClass = $isWorkingTime ? '' : 'non-working-time'; // CSS class for non-working hours
+                                ?>
+                                <tr class="<?= $rowClass ?>">
+                                    <td><?= $time ?></td>
+                                    <?php foreach ($assets as $assetId => $assetName): ?>
+                                        <td class="<?= $row[$assetId] === 'booked' ? 'booked-slot' : '' ?>"></td>
+                                    <?php endforeach; ?>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
 
             <!-- Standard segment on all admin panels: Right column admin Controls -->
             <div class="col-4">
