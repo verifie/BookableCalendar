@@ -68,45 +68,58 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     <div class="container">
 
-        <?php echo '<h1>ADMINISTRATOR ACCOUNT - ' . htmlspecialchars($_SESSION["username"]) . '</h1><br/><br/> '?>
+        <?php echo '<h1>ADMINISTRATOR ACCOUNT - ' . htmlspecialchars($_SESSION["username"]) . '</h1><br/><br/> '; ?>
+        
         <div class="row">
-        <div class="col-8">
+
+            <div class="col-8">
                 <h2>Configure Working Hours</h2>
                 <br/>
 
                 <!-- Form to show and change working hours -->
-                <div class="schedule-matrix">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Time</th>
-                                <?php foreach ($assets as $assetName): ?>
-                                    <th><?= htmlspecialchars($assetName) ?></th>
-                                <?php endforeach; ?>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($schedule as $time => $row): ?>
-                                <?php
-                                // Check if the time is within working hours
-                                $isWorkingTime = (strtotime($time) >= strtotime($settings['WorkingHoursStart']) && strtotime($time) < strtotime($settings['WorkingHoursEnd']));
-                                $rowClass = $isWorkingTime ? '' : 'non-working-time'; // CSS class for non-working hours
-                                ?>
-                                <tr class="<?= $rowClass ?>">
-                                    <td><?= $time ?></td>
-                                    <?php foreach ($assets as $assetId => $assetName): ?>
-                                        <td class="<?= $row[$assetId] === 'booked' ? 'booked-slot' : '' ?>"></td>
-                                    <?php endforeach; ?>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
+                <form method="post" class="form-inline">
+
+                    <div class="form-group mr-3">
+                        <label for="workingHoursStart" class="mr-2">Start Time:</label>
+                        <select class="form-control" id="workingHoursStart" name="workingHoursStart">
+                            <?php
+                            for ($i = 0; $i < 24; $i++) {
+                                for ($j = 0; $j < 60; $j += 15) {
+                                    $timeValue = str_pad($i, 2, "0", STR_PAD_LEFT) . ':' . str_pad($j, 2, "0", STR_PAD_LEFT);
+                                    $selected = (isset($settings['WorkingHoursStart']) && $settings['WorkingHoursStart'] == $timeValue) ? 'selected' : '';
+                                    echo "<option value='$timeValue' $selected>$timeValue</option>";
+                                }
+                            }
+                            ?>
+                        </select>
+                    </div>
+
+                    <div class="form-group mr-3">
+                        <label for="workingHoursEnd" class="mr-2">End Time:</label>
+                        <select class="form-control" id="workingHoursEnd" name="workingHoursEnd">
+                            <?php
+                            for ($i = 0; $i < 24; $i++) {
+                                for ($j = 0; $j < 60; $j += 15) {
+                                    $timeValue = str_pad($i, 2, "0", STR_PAD_LEFT) . ':' . str_pad($j, 2, "0", STR_PAD_LEFT);
+                                    $selected = (isset($settings['WorkingHoursEnd']) && $settings['WorkingHoursEnd'] == $timeValue) ? 'selected' : '';
+                                    echo "<option value='$timeValue' $selected>$timeValue</option>";
+                                }
+                            }
+                            ?>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Update Working Hours</button>
+                
+                </form>
+
+            </div>
 
             <!-- Standard segment on all admin panels: Right column admin Controls -->
             <div class="col-4">
                 <?php require_once 'x-admin-controls.php'; ?>
             </div>
+
         </div>
 
     </div>

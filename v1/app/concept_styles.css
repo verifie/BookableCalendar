@@ -137,6 +137,8 @@
     transform: rotate(180deg);
     white-space: nowrap; /* Keeps the text in one line */
     border: 1px solid #0a0909; /* Ensure border visibility */
+    text-align: center;
+    vertical-align: middle;
 }
 
 .schedule-matrix td {
@@ -144,6 +146,8 @@
     font-size: 0.6em; /* Reduced font size */
     height: 8px; /* Reduced height */
     border: 1px solid #0a0909; /* Ensure border visibility */
+    text-align: center;
+    vertical-align: middle;
 }
 
 .schedule-matrix td.booked {
@@ -151,10 +155,19 @@
     font-size: 0.6em; /* Reduced font size */
     height: 8px; /* Reduced height */
     border: 1px solid #0a0909; /* Ensure border visibility */
+    text-align: center;
+    vertical-align: middle;
 }
 
 .schedule-matrix .booked-slot {
     background-color: #FF5733; /* Change this color to your preferred booked time color */
 }
+
+.schedule-matrix table th,
+.schedule-matrix table td {
+}
+
+
+
 
 /* END Day view Matrix schedule */

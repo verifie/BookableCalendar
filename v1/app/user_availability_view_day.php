@@ -15,10 +15,45 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
+// Fetch working hours settings
+$settingsSql = "SELECT SettingName, Setting FROM AdminSettings WHERE SettingName IN ('WorkingHoursStart', 'WorkingHoursEnd')";
+$settingsResult = $conn->query($settingsSql);
+$workingHours = [];
+while ($row = $settingsResult->fetch_assoc()) {
+    $workingHours[$row['SettingName']] = $row['Setting'];
+}
+
+// Default display times are set to working hours plus an hour buffer
+$displayStart = DateTime::createFromFormat('H:i', $workingHours['WorkingHoursStart'])->modify('-1 hour');
+$displayEnd = DateTime::createFromFormat('H:i', $workingHours['WorkingHoursEnd'])->modify('+1 hour');
+
+// Adjust display times based on bookings
+foreach ($bookings as $booking) {
+    $bookingStart = DateTime::createFromFormat('H:i', $booking['start']);
+    $bookingEnd = DateTime::createFromFormat('H:i', $booking['end']);
+
+    if ($bookingStart < $displayStart) {
+        $displayStart = (clone $bookingStart)->modify('-1 hour');
+    }
+    if ($bookingEnd > $displayEnd) {
+        $displayEnd = (clone $bookingEnd)->modify('+1 hour');
+    }
+}
+
+// Fetch assets for columns
+$assetSql = "SELECT AssetID, AssetName FROM Assets";
+$assetResult = $conn->query($assetSql);
+$assets = [];
+while ($row = $assetResult->fetch_assoc()) {
+    $assets[$row['AssetID']] = $row['AssetName'];
+}
+
+
 // 4. Fetch date from URL
 $year = isset($_GET['y']) ? $_GET['y'] : date("Y");
 $month = isset($_GET['m']) ? $_GET['m'] : date("m");
 $day = isset($_GET['d']) ? $_GET['d'] : date("d");
+
 
 // 5. Fetch booking details for the selected day
 $sql = "SELECT b.AssetID, a.AssetName, b.StartTime, b.EndTime 
@@ -40,6 +75,39 @@ while ($row = $result->fetch_assoc()) {
     ];
 }
 
+// Initialize schedule array for the entire day
+$schedule = [];
+for ($hour = 0; $hour < 24; $hour++) {
+    for ($minute = 0; $minute < 60; $minute += 15) {
+        $time = str_pad($hour, 2, '0', STR_PAD_LEFT) . ":" . str_pad($minute, 2, '0', STR_PAD_LEFT);
+        foreach ($assets as $assetId => $assetName) {
+            $schedule[$time][$assetId] = ''; // Initialize with empty string
+        }
+    }
+}
+
+
+
+// Filter the schedule to include only times within the display range
+$filteredSchedule = [];
+foreach ($schedule as $time => $row) {
+    $currentTime = DateTime::createFromFormat('H:i', $time);
+    if ($currentTime >= $displayStart && $currentTime <= $displayEnd) {
+        $filteredSchedule[$time] = $row;
+    }
+}
+
+
+// Initialize schedule array within display times
+$schedule = [];
+$current = clone $displayStart;
+while ($current <= $displayEnd) {
+    $timeSlot = $current->format('H:i');
+    foreach ($assets as $assetId => $assetName) {
+        $schedule[$timeSlot][$assetId] = ''; // Initialize with empty string
+    }
+    $current->modify('+15 minutes'); // Increment by 15 minutes
+}
 
 // 6. Fetch closed days and holidays
 $closedDaysSql = "SELECT WorkingClosedDaysName FROM WorkingDaysClosed WHERE WorkingClosedDays = ?";
@@ -65,24 +133,7 @@ if ($rowHoliday = $resultHoliday->fetch_assoc()) {
 
 // Add code for a day schedule.
 
-// Fetch assets for columns
-$assetSql = "SELECT AssetID, AssetName FROM Assets";
-$assetResult = $conn->query($assetSql);
-$assets = [];
-while ($row = $assetResult->fetch_assoc()) {
-    $assets[$row['AssetID']] = $row['AssetName'];
-}
 
-// Initialize schedule array
-$schedule = [];
-for ($hour = 0; $hour < 24; $hour++) {
-    for ($minute = 0; $minute < 60; $minute += 15) { // 15-minute increments
-        $time = str_pad($hour, 2, '0', STR_PAD_LEFT) . ":" . str_pad($minute, 2, '0', STR_PAD_LEFT);
-        foreach ($assets as $assetId => $assetName) {
-            $schedule[$time][$assetId] = ''; // Initialize with empty string
-        }
-    }
-}
 
 // Populate the schedule with booking information
 foreach ($bookings as $booking) {
@@ -90,12 +141,13 @@ foreach ($bookings as $booking) {
     $endTime = DateTime::createFromFormat('H:i', $booking['end']);
     $assetId = array_search($booking['asset'], $assets);
 
-    // Loop through each 15-minute interval and mark as booked
     $current = clone $startTime;
     while ($current < $endTime) {
         $timeSlot = $current->format('H:i');
-        $schedule[$timeSlot][$assetId] = 'booked';
-        $current->modify('+15 minutes'); // Increment by 15 minutes
+        if (isset($schedule[$timeSlot][$assetId])) {
+            $schedule[$timeSlot][$assetId] = 'booked';
+        }
+        $current->modify('+15 minutes');
     }
 }
 
@@ -225,6 +277,8 @@ require 'x-header.php';
                             <?php endforeach; ?>
                         </tbody>
                     </table>
+
+                    <br/><br/>
                 </div>
 
 
