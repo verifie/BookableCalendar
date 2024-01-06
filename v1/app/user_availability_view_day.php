@@ -141,6 +141,25 @@ foreach ($bookings as $booking) {
     $endTime = DateTime::createFromFormat('H:i', $booking['end']);
     $assetId = array_search($booking['asset'], $assets);
 
+    if ($assetId === false) {
+        continue; // Skip if asset ID is not found
+    }
+
+    // Adjust startTime to the nearest previous 15-minute interval
+    $startMinutes = (int)$startTime->format('i');
+    if ($startMinutes % 15 !== 0) {
+        $adjustment = $startMinutes % 15;
+        $startTime->modify("-$adjustment minutes");
+    }
+
+    // Adjust endTime to the nearest next 15-minute interval
+    $endMinutes = (int)$endTime->format('i');
+    if ($endMinutes % 15 !== 0) {
+        $adjustment = 15 - ($endMinutes % 15);
+        $endTime->modify("+$adjustment minutes");
+    }
+
+    // Loop through each 15-minute interval and mark as booked
     $current = clone $startTime;
     while ($current < $endTime) {
         $timeSlot = $current->format('H:i');
