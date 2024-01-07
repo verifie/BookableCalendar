@@ -1,21 +1,118 @@
 <?php
+
+//---------------------------
 // 1. Initialise the session
+//---------------------------
 session_start();
 
+
+// -----------------------------------
 // 2. Check user security
+// -----------------------------------
+
 if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     header("location: login.php");
     exit;
 }
 
+
+
+// -----------------------
 // 3. Database Connection
+//------------------------
+
 require_once 'x-dbconfig.php';
 $conn = new mysqli($servername, $username, $password, $dbname);
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// Fetch working hours settings
+
+
+// ------------------------------------
+// Fetches and other establishing data
+// ------------------------------------
+
+
+// *** Get National Holidays an Closed days
+
+// Create a variable to store special day (Nonbooking dates, for example, holdays, closed days) information
+$specialDayInfo = '';
+
+// Fetch closed days
+$closedDaysSql = "SELECT WorkingClosedDaysName FROM WorkingDaysClosed WHERE WorkingClosedDays = ?";
+$stmtClosed = $conn->prepare($closedDaysSql);
+$stmtClosed->bind_param("s", $date);
+$stmtClosed->execute();
+$resultClosed = $stmtClosed->get_result();
+
+// If there is a closed day, display the reason for closure
+if ($rowClosed = $resultClosed->fetch_assoc()) {
+    $specialDayInfo = "Closed" ;// Hiding closure reason for now.
+    //. $rowClosed['WorkingClosedDaysName']; // Hiding the closure reason for all, for now.
+}
+
+
+// Fetch National Holidays
+$holidaysSql = "SELECT WorkingHolidaysName FROM WorkingDaysHoliday WHERE WorkingHolidays = ?";
+$stmtHoliday = $conn->prepare($holidaysSql);
+$stmtHoliday->bind_param("s", $date);
+$stmtHoliday->execute();
+$resultHoliday = $stmtHoliday->get_result();
+
+// If there is a national holiday, display the reason for the holiday
+if ($rowHoliday = $resultHoliday->fetch_assoc()) {
+    $specialDayInfo = "National Holiday - " . $rowHoliday['WorkingHolidaysName'];
+}
+
+
+
+// ** Get date to display from URL.  
+// This is the date that the user clicked on the calendar.
+$year = isset($_GET['y']) ? $_GET['y'] : date("Y");
+$month = isset($_GET['m']) ? $_GET['m'] : date("m");
+$day = isset($_GET['d']) ? $_GET['d'] : date("d");
+
+
+
+// Fetch assets for columns
+$assetSql = "SELECT AssetID, AssetName FROM Assets";
+$assetResult = $conn->query($assetSql);
+$assets = [];
+while ($row = $assetResult->fetch_assoc()) {
+    $assets[$row['AssetID']] = $row['AssetName'];
+}
+
+
+
+
+// ** Fetch details of bookings on the selected day
+$sql = "SELECT b.AssetID, a.AssetName, b.StartTime, b.EndTime 
+        FROM Bookings b 
+        JOIN Assets a ON b.AssetID = a.AssetID 
+        WHERE DATE(b.StartTime) = ?";
+$stmt = $conn->prepare($sql);
+$date = "$year-$month-$day";
+$stmt->bind_param("s", $date);
+$stmt->execute();
+$result = $stmt->get_result();
+
+// Create an array to store the sorted booking information
+$bookings = [];
+
+// Loop through each row of the result set and add to the bookings array
+while ($row = $result->fetch_assoc()) {
+    $bookings[] = [
+        'asset' => $row['AssetName'],
+        'start' => date('H:i', strtotime($row['StartTime'])),
+        'end' => date('H:i', strtotime($row['EndTime']))
+    ];
+}
+
+
+// ** Set up start/end times for the visual day schedule matrix
+
+// Fetch standard working hours (admin configuration)
 $settingsSql = "SELECT SettingName, Setting FROM AdminSettings WHERE SettingName IN ('WorkingHoursStart', 'WorkingHoursEnd')";
 $settingsResult = $conn->query($settingsSql);
 $workingHours = [];
@@ -23,11 +120,13 @@ while ($row = $settingsResult->fetch_assoc()) {
     $workingHours[$row['SettingName']] = $row['Setting'];
 }
 
-// Default display times are set to working hours plus an hour buffer
+// Default display times are set to working hours plus an hour buffer both sides.
 $displayStart = DateTime::createFromFormat('H:i', $workingHours['WorkingHoursStart'])->modify('-1 hour');
 $displayEnd = DateTime::createFromFormat('H:i', $workingHours['WorkingHoursEnd'])->modify('+1 hour');
 
 // Adjust display times based on bookings
+// There may be bookings that run outside of the standard working hours, so our matrix must adapt to show them.
+// Always show an hour buffer either side of the first and last bookings.
 foreach ($bookings as $booking) {
     $bookingStart = DateTime::createFromFormat('H:i', $booking['start']);
     $bookingEnd = DateTime::createFromFormat('H:i', $booking['end']);
@@ -40,43 +139,13 @@ foreach ($bookings as $booking) {
     }
 }
 
-// Fetch assets for columns
-$assetSql = "SELECT AssetID, AssetName FROM Assets";
-$assetResult = $conn->query($assetSql);
-$assets = [];
-while ($row = $assetResult->fetch_assoc()) {
-    $assets[$row['AssetID']] = $row['AssetName'];
-}
 
 
-// 4. Fetch date from URL
-$year = isset($_GET['y']) ? $_GET['y'] : date("Y");
-$month = isset($_GET['m']) ? $_GET['m'] : date("m");
-$day = isset($_GET['d']) ? $_GET['d'] : date("d");
 
-
-// 5. Fetch booking details for the selected day
-$sql = "SELECT b.AssetID, a.AssetName, b.StartTime, b.EndTime 
-        FROM Bookings b 
-        JOIN Assets a ON b.AssetID = a.AssetID 
-        WHERE DATE(b.StartTime) = ?";
-$stmt = $conn->prepare($sql);
-$date = "$year-$month-$day";
-$stmt->bind_param("s", $date);
-$stmt->execute();
-$result = $stmt->get_result();
-
-$bookings = [];
-while ($row = $result->fetch_assoc()) {
-    $bookings[] = [
-        'asset' => $row['AssetName'],
-        'start' => date('H:i', strtotime($row['StartTime'])),
-        'end' => date('H:i', strtotime($row['EndTime']))
-    ];
-}
-
-// Initialize schedule array for the entire day
+// ** Initialize schedule array for the entire day
 $schedule = [];
+
+// Loop through each 15-minute interval of the day and initialize with empty string
 for ($hour = 0; $hour < 24; $hour++) {
     for ($minute = 0; $minute < 60; $minute += 15) {
         $time = str_pad($hour, 2, '0', STR_PAD_LEFT) . ":" . str_pad($minute, 2, '0', STR_PAD_LEFT);
@@ -85,8 +154,6 @@ for ($hour = 0; $hour < 24; $hour++) {
         }
     }
 }
-
-
 
 // Filter the schedule to include only times within the display range
 $filteredSchedule = [];
@@ -97,53 +164,23 @@ foreach ($schedule as $time => $row) {
     }
 }
 
-
-// Initialize schedule array within display times
-$schedule = [];
-$current = clone $displayStart;
-while ($current <= $displayEnd) {
-    $timeSlot = $current->format('H:i');
-    foreach ($assets as $assetId => $assetName) {
-        $schedule[$timeSlot][$assetId] = ''; // Initialize with empty string
-    }
-    $current->modify('+15 minutes'); // Increment by 15 minutes
-}
-
-// 6. Fetch closed days and holidays
-$closedDaysSql = "SELECT WorkingClosedDaysName FROM WorkingDaysClosed WHERE WorkingClosedDays = ?";
-$holidaysSql = "SELECT WorkingHolidaysName FROM WorkingDaysHoliday WHERE WorkingHolidays = ?";
-$specialDayInfo = '';
-
-$stmtClosed = $conn->prepare($closedDaysSql);
-$stmtClosed->bind_param("s", $date);
-$stmtClosed->execute();
-$resultClosed = $stmtClosed->get_result();
-if ($rowClosed = $resultClosed->fetch_assoc()) {
-    $specialDayInfo = "Closed" ;// Hiding closure reason for now.
-    //. $rowClosed['WorkingClosedDaysName'];
-}
-
-$stmtHoliday = $conn->prepare($holidaysSql);
-$stmtHoliday->bind_param("s", $date);
-$stmtHoliday->execute();
-$resultHoliday = $stmtHoliday->get_result();
-if ($rowHoliday = $resultHoliday->fetch_assoc()) {
-    $specialDayInfo = "National Holiday - " . $rowHoliday['WorkingHolidaysName'];
-}
-
-// Add code for a day schedule.
+// Replace the schedule with the filtered schedule
+$schedule = $filteredSchedule;
 
 
 
-// Populate the schedule with booking information
+
+
+// ** Populate the schedule with booking information
 foreach ($bookings as $booking) {
-    $startTime = DateTime::createFromFormat('H:i', $booking['start']);
-    $endTime = DateTime::createFromFormat('H:i', $booking['end']);
+
+    // Get the asset ID for the booking
     $assetId = array_search($booking['asset'], $assets);
 
-    if ($assetId === false) {
-        continue; // Skip if asset ID is not found
-    }
+    // Get the start and end times of the booking
+    $startTime = DateTime::createFromFormat('H:i', $booking['start']);
+    $endTime = DateTime::createFromFormat('H:i', $booking['end']);
+
 
     // Adjust startTime to the nearest previous 15-minute interval
     $startMinutes = (int)$startTime->format('i');
@@ -159,13 +196,17 @@ foreach ($bookings as $booking) {
         $endTime->modify("+$adjustment minutes");
     }
 
-    // Loop through each 15-minute interval and mark as booked
+    // Loop through each schedule interval and mark as booked
     $current = clone $startTime;
+
     while ($current < $endTime) {
+
         $timeSlot = $current->format('H:i');
+
         if (isset($schedule[$timeSlot][$assetId])) {
             $schedule[$timeSlot][$assetId] = 'booked';
         }
+
         $current->modify('+15 minutes');
     }
 }
@@ -180,6 +221,13 @@ $formattedDate = date("l jS F Y", $timestamp); // Formats date as 'Thursday 4th 
 // 6. Close database connection
 $conn->close();
 ?>
+
+
+
+<!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+<!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+<!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -279,14 +327,21 @@ require 'x-header.php';
                     <table>
                         <thead>
                             <tr>
+                                <!-- Insert a fixed column for time bands -->
                                 <th>Time</th>
+
+                                <!-- Dynamically insert a column for each asset -->
                                 <?php foreach ($assets as $assetName): ?>
                                     <th><?= htmlspecialchars($assetName) ?></th>
                                 <?php endforeach; ?>
+
                             </tr>
                         </thead>
                         <tbody>
+
+                            <!-- Dynamically insert a row for each timeband interval -->
                             <?php foreach ($schedule as $time => $row): ?>
+
                                 <tr>
                                     <td><?= $time ?></td>
                                     <?php foreach ($assets as $assetId => $assetName): ?>
@@ -296,7 +351,7 @@ require 'x-header.php';
                             <?php endforeach; ?>
                         </tbody>
                     </table>
-
+                        Schedule variable <pre><?php print_r($schedule); ?></pre>
                     <br/><br/>
                 </div>
 

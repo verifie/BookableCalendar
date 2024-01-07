@@ -132,20 +132,20 @@
 
 .schedule-matrix th {
     min-width: 15px; /* Adjust minimum width as needed */
-    text-align: center;
-    writing-mode: vertical-lr;
     transform: rotate(180deg);
-    white-space: nowrap; /* Keeps the text in one line */
-    border: 1px solid #0a0909; /* Ensure border visibility */
     text-align: center;
     vertical-align: middle;
+    writing-mode: vertical-lr;
+    white-space: nowrap; /* Keeps the text in one line */
+    border: 1px solid #0a0909; 
 }
 
 .schedule-matrix td {
+    height: 8px;
     background-color: deeporange;
     font-size: 0.6em; /* Reduced font size */
-    height: 8px; /* Reduced height */
-    border: 1px solid #0a0909; /* Ensure border visibility */
+    height: 6px; /* Reduced height */
+    border: 1px solid #0a0909; 
     text-align: center;
     vertical-align: middle;
 }

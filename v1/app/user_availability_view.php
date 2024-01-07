@@ -42,12 +42,12 @@ if ($conn->connect_error) {
 $message = '';
 
 
-// 6. Definitions
+// Definitions
 // --------------
 
 
-// 7. Fetches
-// ----------
+// Calculators and Helpers
+// -----------------------
 
 // Helper to get todays date in the right format. Used to show past, present and future days in the calendar.
 function classifyDay($year, $month, $day) {
@@ -59,6 +59,30 @@ function classifyDay($year, $month, $day) {
     return 'future';
 }
 
+
+
+
+// Fetches and other establishing data
+// -----------------------------------
+
+
+// Determine the day to show.
+// This is either the day selected in the URL, or in the abence of one, we show the current day.
+
+// Check if month and year are set in the URL
+if (isset($_GET['month']) && isset($_GET['year'])) {
+    $month = $_GET['month'];
+    $year = $_GET['year'];
+} else {
+    // If the month and year aren't in the URL, Get current month and year and present that.
+    // This is the default view.
+    // We can improve this by checking if the current month is fully booked and then present the next month with availability.
+    $dateComponents = getdate();
+    $month = $dateComponents['mon'];
+    $year = $dateComponents['year'];
+}
+
+
 // Fetch closed days
 $closedDaysSql = "SELECT WorkingClosedDaysName, WorkingClosedDays FROM WorkingDaysClosed";
 $closedDaysResult = $conn->query($closedDaysSql);
@@ -67,6 +91,7 @@ while ($row = $closedDaysResult->fetch_assoc()) {
     $closedDayFormattedDate = date('Y-m-d', strtotime($row['WorkingClosedDays']));
     $closedDays[$closedDayFormattedDate] = $row['WorkingClosedDaysName'];
 }
+
 
 // Fetch holidays
 $holidaysSql = "SELECT WorkingHolidaysName, WorkingHolidays FROM WorkingDaysHoliday";
@@ -87,24 +112,11 @@ while($assetRow = $assetResult->fetch_assoc()) {
 }
 
 
-// 7. Calendar View
-
-// Check if month and year are set in the URL
-if (isset($_GET['month']) && isset($_GET['year'])) {
-    $month = $_GET['month'];
-    $year = $_GET['year'];
-} else {
-    // If the month and year aren't in the URL, Get current month and year and present that.
-    // This is the default view.
-    // We can improve this by checking if the current month is fully booked and then present the next month with availability.
-    $dateComponents = getdate();
-    $month = $dateComponents['mon'];
-    $year = $dateComponents['year'];
-}
-
 
 
 // Function to build the calendar
+// ------------------------------
+
 function build_calendar($month, $year, $conn, $selectedAsset = '', $showDetails = false, $closedDays, $holidays) {
     
     // Create an array containing abbreviations of days of week
@@ -131,7 +143,6 @@ function build_calendar($month, $year, $conn, $selectedAsset = '', $showDetails 
     if ($dayOfWeek < 0) {
         $dayOfWeek = 6; // If the first day of the month is a Sunday, set $dayOfWeek to 6 (Sunday)
     }
-
 
     // Create the table tag opener and day headers
     $calendar = "<table class='table table-bordered calendar weekend-shaded'>";
